@@ -1,0 +1,83 @@
+<!-- index.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <h1>Welcome to the Chat App</h1>
+    <div id="chat">
+        <div id="userList"></div>
+        <ul id="messages"></ul>
+        <div id="typingIndicator"></div>
+        <form id="form" action="#">
+            <input id="messageInput" autocomplete="off" placeholder="Type your message..." /><button>Send</button>
+        </form>
+    </div>
+
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const socket = io();
+            const form = document.querySelector('form');
+            const input = document.querySelector('#messageInput');
+            const messages = document.querySelector('#messages');
+            const userList = document.querySelector('#userList');
+
+            socket.on('userId', (userId) => {
+                console.log('Your User ID:', userId);
+            });
+
+            socket.on('chatMessage', (msg) => {
+                if (msg.message === '/clear') {
+                    messages.innerHTML = '';
+                } else {
+                    const li = document.createElement('li');
+                    const username = msg.username || 'Anonymous';
+                    li.innerHTML = `<span class="username">${username}:</span> ${msg.message}`;
+                    messages.appendChild(li);
+                }
+            });
+
+            socket.on('updateUserList', (users) => {
+                userList.innerHTML = `<p><strong>Users in Chat:</strong></p><ul>${users.map(user => `<li>${user}</li>`).join('')}</ul>`;
+            });
+
+            socket.on('typingIndicator', ({ username, isTyping }) => {
+                const indicator = document.querySelector('#typingIndicator');
+                if (isTyping) {
+                    indicator.innerText = `${username} is typing...`;
+                } else {
+                    indicator.innerText = '';
+                }
+            });
+
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                if (input.value) {
+                    socket.emit('chatMessage', input.value);
+                    socket.emit('chatMessage', '/typing');
+                    input.value = '';
+                }
+            });
+
+            input.addEventListener('input', () => {
+                socket.emit('chatMessage', '/typing');
+            });
+
+            const username = prompt('Enter your username:');
+            if (username) {
+                socket.emit('updateUsername', username);
+            }
+        });
+    </script>
+</body>
+
+</html>
